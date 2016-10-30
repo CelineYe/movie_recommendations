@@ -15,7 +15,7 @@ class Movie(models.Model):
         all_ratings = map(lambda x:x.rating, self.review_set.all())
         return np.mean(all_ratings)
 
-class Rating(models.Model):
+class Review(models.Model):
     RATING_CHOICES = (
             (0, '0'),
             (1, '1'),
@@ -24,11 +24,11 @@ class Rating(models.Model):
             (4, '4'),
             (5, '4'),
     )
-    userId = models.ForeignKey(User)
-    movieId = models.ForeignKey(Movie)
+    user = models.ForeignKey(User)
+    movie = models.ForeignKey(Movie)
     rating = models.IntegerField(choices=RATING_CHOICES)
     comment = models.CharField(max_length=1024)
-    timestamp = models.IntegerField()
+    pub_date = models.DateTimeField('date published')
 
 class RecommendedMovieList(models.Model):
     user = models.ForeignKey(User)
