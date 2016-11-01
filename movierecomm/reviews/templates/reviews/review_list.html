@@ -13,7 +13,7 @@
         {{ review.movie.title }}
         </a></h4>
         <h6>Rated {{ review.rating }} of 5 by 
-            <a href="{% url 'reviews:user_review_list' review.user.username %}" >{{ review.user.username }}</a>
+            <a href="{% url 'reviews:user_review_list' review.user.id %}" >{{ review.user.username }}</a>
         </h6>
         <p>{{ review.comment }}</p>
     </div>
