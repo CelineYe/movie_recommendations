@@ -41,6 +41,7 @@ class RecommendedMovieList(models.Model):
 
     ALGO_CHOICES = (
             ('KMEAN', 'KMEAN'),
+            ('KNN', 'KNN'),
     )
 
     algo = models.CharField(max_length=128, choices=ALGO_CHOICES, default='KMEAN')
