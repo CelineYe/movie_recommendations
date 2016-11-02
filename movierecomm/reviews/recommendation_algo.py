@@ -16,6 +16,7 @@ def update_recommendation_by_review(record, mode):
     for review in allreviews:
         print review.movie.movieId, review.user.id, review.rating
 
+    return
     #--- write to db -----
     allusers = User.objects.all()
     for user in allusers:

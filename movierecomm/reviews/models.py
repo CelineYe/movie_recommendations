@@ -44,7 +44,7 @@ class RecommendedMovieList(models.Model):
             ('KNN', 'KNN'),
     )
 
-    algo = models.CharField(max_length=128, choices=ALGO_CHOICES, default='KMEAN')
+    algo = models.CharField(max_length=128, default='NAIVE')
 
     class Meta:
         unique_together = (('user', 'movie', 'algo'),)

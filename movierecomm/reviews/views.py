@@ -66,13 +66,21 @@ def user_review_list(request, userid=None):
     if not userid:
         userid = request.user.id
     latest_review_list = Review.objects.filter(user__id=userid).order_by('-pub_date')
-    context = {'latest_review_list':latest_review_list, 'username':username}
+    context = {'latest_review_list':latest_review_list, 'username':request.user.username}
     return render(request, 'reviews/user_review_list.html', context)
 
 
 @login_required
 def user_recommendation_list(request):
-    pass
+    recomm = RecommendedMovieList.objects.filter(user_id=request.user.id).order_by('priority').prefetch_related('movie')
+    movie_list = [r.movie for r in recomm]
+
+    return render(
+        request, 
+        'reviews/recommendation_list.html', 
+        {'username': request.user.username,'movie_list': movie_list}
+    )
+    
 
 
 
