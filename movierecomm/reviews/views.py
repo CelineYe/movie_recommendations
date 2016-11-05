@@ -72,7 +72,7 @@ def user_review_list(request, userid=None):
 
 @login_required
 def user_recommendation_list(request):
-    recomm = RecommendedMovieList.objects.filter(user_id=request.user.id).order_by('priority').prefetch_related('movie')
+    recomm = RecommendedMovieList.objects.filter(user_id=request.user.id).order_by('priority').prefetch_related('movie')[:10]
     movie_list = [r.movie for r in recomm]
 
     return render(
