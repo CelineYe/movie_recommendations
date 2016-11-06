@@ -42,7 +42,7 @@ def add_review(request, movie_id):
         comment = form.cleaned_data['comment']
         try:
             review = Review.objects.get(user_id=request.user.id, movie_id=movie_id)
-            review.rating = row['rating']
+            review.rating = rating
             review.save(update_fields=['rating', 'comment'])
             update_recommendation_by_review((request.user.id, movie_id), 'update')
         except Review.DoesNotExist :
@@ -73,7 +73,11 @@ def user_review_list(request, userid=None):
 @login_required
 def user_recommendation_list(request):
     recomm = RecommendedMovieList.objects.filter(user_id=request.user.id).order_by('priority').prefetch_related('movie')[:10]
-    movie_list = [r.movie for r in recomm]
+    movie_list = [] # [r.movie for r in recomm]
+    for m in recomm:
+        m.movie.priority = m.priority
+        m.movie.algoName = m.algo
+        movie_list.append(m.movie)
 
     return render(
         request, 

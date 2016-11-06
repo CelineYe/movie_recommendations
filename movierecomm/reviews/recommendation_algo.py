@@ -1,27 +1,30 @@
-
+import os
 from django.contrib.auth.models import User
-from reviews.models import Review, Movie
+from reviews.models import Review, Movie, RecommendedMovieList
 
 import numpy as np
-from operator import itemgetter
+from operator import itemgetter, add
 
-_debug = False
+_debug = True
 
 def printMsg(*args):
     if _debug: print args
 
 def valid_numeric(x):
-    return not np.isinf(x) and not np.nan(x)
+    return not np.isinf(x) and not np.isnan(x)
 
-def add(x, y):
-    return x+y
-
-def max(x, y):
-    return x if x > y else y
+def square(x):
+    return x*x
 
 def square_diff(x,y):
     d = x-y
     return d*d
+
+def counted_func(mutable_counter, func):
+    def f(*args):
+        mutable_counter[0] += 1
+        return add(*args)
+    return f
 
 def defPreBinaryFunc(preFunc, binFunc):
     def f(x,y):
@@ -33,21 +36,23 @@ def foreach_in_row(A, I, func, reduceFunc=None, initial=0):
     N = A.shape[1]
     if reduceFunc:
         for k in xrange(N):
-            initial = reduceFunc(initial, func(A[I, k]))
+            if valid_numeric(A[I,k]):
+                initial = reduceFunc(initial, func(A[I, k]))
         return initial
     else:
         for k in xrange(N):
-            func(A[I, k])
+            if valid_numeric(A[I,k]):
+                func(A[I, k])
 
 def foreach_in_col(A, I, func, reduceFunc=None, initial=0):
     N = A.shape[0]
     if reduceFunc:
         for k in xrange(N):
-            if valid_numeric(A[I,k]) : initial = reduceFunc(initial, func(A[k, I]))
+            if valid_numeric(A[k, I]) : initial = reduceFunc(initial, func(A[k, I]))
         return initial
     else:
         for k in xrange(N):
-            if valid_numeric(A[I,k]) : func(A[k, I])
+            if valid_numeric(A[k, I]) : func(A[k, I])
 
 def foreach_pair_rows(A, I, J, func, reduceFunc=None, initial=0):
     """ call func(A[I, k], A[J, k] if A[i] and B[i] are valid 
@@ -67,19 +72,24 @@ def square_distance(A, I, J):
     """ A[I,:] and A[J,:] distance. 
     return (distance, nDim)  # nDim: number of calculated dimensions
     """
-    nDim = 0
-    d = foreach_pair_rows(A, I, J, square_diff, defPreBinaryFunc(lambda : nDim +=1, add), 0.0)
-    return (d, nDim)
+    nDim = [0]
+    d = foreach_pair_rows(A, I, J, square_diff, counted_func(nDim, add), 0.0)
+    return (d, nDim[0])
 
 def cosine_distance(A, I, J):
-    nDim = 0
-    dot = foreach_pair_rows(A, I, J, lambda x, y: x*y, defPreBinaryFunc(lambda : nDim +=1, add), 0.0)
-    if nDim > 0 :
-        d1 = foreach_in_row(A, I, lambda x: x*x, add, 0.0)
-        d2 = foreach_in_row(A, J, lambda x: x*x, add, 0.0)
-        return (dot/d1*dot/d2, nDim)
+    nDim = [0]
+    dot = foreach_pair_rows(A, I, J, lambda x, y: x*y, counted_func(nDim, add), 0.0)
+    if nDim[0] > 0 :
+        d1 = foreach_in_row(A, I, square, add, 0.0)
+        d2 = foreach_in_row(A, J, square, add, 0.0)
+        d = dot/d1*dot/d2
+        if d == 0 :
+            printMsg( "zero:", dot, d1, d2, nDim[0] )
+            printMsg( "zero I:", A[I,:] )
+            printMsg( "zero J:", A[J,:] )
+        return (d, nDim[0])
     else:
-        return (np.inf, nDim)
+        return (np.inf, nDim[0])
 
 
 def scaleRating(r):
@@ -94,20 +104,20 @@ def jz_calculate_recommendations(ratings, userCount, movieCount, NU, NM, MAX_REC
     userCount, movieCount: number of users and movies
     Nu, NM : valid number of users and movies. all the reset are set numpy.inf
 
-    return recommededMovie[u, m]: u, m are user & movie index. numpy.inf can be filled.
+    return recommededMovies: { userIndex: [(movieIndex, priority) ] } .
     """
 
     # todo scale rating to range [r0, r1], so that distance is not zero
-    printMsg("Ratings:", ratings)
+    printMsg("Ratings:", ratings.shape, ratings[17, 669])
 
     #-- most popular movie index
     ratings_by_movie = [] # [ (movieIndex, rating) ]
     for i in xrange(NM):
-        ratings_by_movie.push((i, foreach_in_col(ratings, i, lambda x:x, add, 0.0))
+        ratings_by_movie.append((i, foreach_in_col(ratings, i, lambda x:x, add, 0.0)))
 
-    ratings_by_movie = sorted(ratings_by_movie, key=itemgetter(i)
+    ratings_by_movie = sorted(ratings_by_movie, key=itemgetter(1))
 
-    printMsg("Most popular movie:", popularMi, midmap[popularMi])
+    printMsg("Most popular movie:",  ratings_by_movie[0])
 
     #-- calculate distances between users
     du = np.full((userCount,userCount), np.inf)
@@ -122,30 +132,47 @@ def jz_calculate_recommendations(ratings, userCount, movieCount, NU, NM, MAX_REC
     #-- recommendations for users
     if MAX_RECOMM > NM: MAX_RECOMM = NM
 
-    ru = np.full((userCount, MAX_RECOMM), np.inf)  # recommended MovieId
+    ru = {}   # recommended MovieId : { userIndex: [(movieIndex, priority)] }
     for i in xrange(NU):
         wr = [] # [(movieIndex, rating)]: weighted rating for each movie
         for m in xrange(NM):
-            if not valid_numeric(ratings[i, m]):  #  skip that user watched already.
+            if valid_numeric(ratings[i, m]):  #  skip that user watched already.
                 continue
             r = 0.0
             n = 0  # count valid ratings by similar users
             for j in xrange(NU):
-                if valid_numeric(du[i,j]) and valid_numeric(rating[j, m]) :
-                    r += rating[j, m] / du[i,j]
+                if valid_numeric(du[i,j]) and valid_numeric(ratings[j, m]) :
+                    r += ratings[j, m] / du[i,j]
                     n += 1
             if n > 0: 
-                wr.push((m, r))
-        sortedMi = sorted(wr, key=itemgetter(1))  # sort by rating
+                wr.append((m, r))
+        sortedMi = sorted(wr, key=itemgetter(1), reverse=True)  # sort by rating
         n = len(sortedMi)
         if n > MAX_RECOMM: n = MAX_RECOMM
-        for k in range(n):
-            ru[i, k] = sortedMi[k][0]
+        if n > 0:
+            ru[i] = wr[:n]
         # todo : if no recommended movies, select most populars or randomly pick up some
+#        printMsg("recommended: ", i, ru[i])
     return ru
 
+def save_recommendation(algoName, records):
+    """ save into database:
+    records: {userId:[(movieId, prioriy)]} 
+    """
+    printMsg( "saving recommendations for algo:", algoName, len(records) )
+
+    RecommendedMovieList.objects.filter(algo=algoName).delete()
+    for userId, recList in records.iteritems():
+        for m in recList:
+            if RecommendedMovieList.objects.get(user_id = userId, movie_id = m[0], priority = m[1]) :
+                continue
+            r = RecommendedMovieList(user_id = userId, movie_id = m[0], priority = m[1])
+            printMsg(r)
+            r.save()
+
+
 #--- algo callback -----------------------------------------
-def update_recommendation_by_review(record, mode):
+def update_recommendation_by_review(record=None, mode=None):
     """ record: (userId, movieId)
     mode: add, update, delete """
     print 'update_recommendation_by_review:', record, mode
@@ -163,7 +190,7 @@ def update_recommendation_by_review(record, mode):
     ratings = np.full((userCount, movieCount), np.inf)  # user rating matrix
     NU = NM = 0
     for r in allreviews:
-        uid, mid = r.user.id, r.movie.movieId
+        uid, mid = r.user_id, r.movie_id
         if uidrmap.has_key(uid):
             ui = uidrmap[uid]
         else:
@@ -175,30 +202,29 @@ def update_recommendation_by_review(record, mode):
         if midrmap.has_key(mid):
             mi = midrmap[mid]
         else:
-            mi =NM
+            mi = NM
             midmap[mi] = mid
             midrmap[mid] = mi
             NM += 1
         ratings[ui, mi] = scaleRating(float(r.rating))
 
+    printMsg("admin:",  User.objects.get(id=669).username, uidrmap[669], "movie:", 2550, midrmap[2550] )
 
     #--- computing in different algorithms ------
-    ru = jz_calculate_recommendations(ratings, userCount, movieCount, NU, NM)
+    algos = [('JZNAIVE', jz_calculate_recommendations)]
+    for a in algos:
+        ru = a[1](ratings, userCount, movieCount, NU, NM)
+        rec = {}   # { userId: [ (movieId, priority) ]}
+        for uidx, m  in ru.iteritems():
+            t = rec[ uidmap[uidx] ] = []
+            for mi in m:
+                t.append( (midmap[mi[0]], mi[1]) )
+        save_recommendation(a[0], rec)
 
-    return
-    #--- write to db -----
-    allusers = User.objects.all()
-    for user in allusers:
-        recomm = RecommendedMovieList()
-        recomm.user_id = 10
-        recomm.movie_id = 10
-        recomm.priority = 10  # 0..100
-        recomm.algo = 'KNN'
-#        recomm.save()
 
-if __filename__ == '__main__':
+if __name__ == '__main__':
     import django
-    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "movierecomm.settings")
+    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "../movierecomm.settings")
 
     django.setup()
     update_recommendation_by_review(None, None)

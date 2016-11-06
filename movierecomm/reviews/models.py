@@ -11,6 +11,9 @@ class Movie(models.Model):
     title = models.CharField(max_length=256)
     genres = models.CharField(max_length=256, null=True)
 
+    def __str__(self):
+        return "{title:\"%s\",genres:\"%s\", rating:%, id:%d}"  %(self.user.username, self.movie.title, self.ratin, self.movieId)
+
     def average_rating(self):
         all_ratings = map(lambda x:x.rating, self.review_set.all())
         return np.mean(all_ratings)
@@ -31,6 +34,9 @@ class Review(models.Model):
     comment = models.CharField(max_length=1024, null=True)
     pub_date = models.DateTimeField('date published')
 
+    def __str__(self):
+        return "{user:\"%s\",movie:\"%s\", rating:%d, id: %d}"  %(self.user.username, self.movie.title, self.rating, self.id)
+
     class Meta:
         unique_together = (('user', 'movie'),)
 
@@ -45,6 +51,9 @@ class RecommendedMovieList(models.Model):
     )
 
     algo = models.CharField(max_length=128, default='NAIVE')
+
+    def __str__(self):
+        return "{user:\"%s\",movie:\"%s\", priority:%d}"  %(self.user.username, self.movie.title, self.priority)
 
     class Meta:
         unique_together = (('user', 'movie', 'algo'),)
