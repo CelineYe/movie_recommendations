@@ -9,11 +9,15 @@
 <div class="row">
     {% for movie in movie_list %}
     <div class="col-xs-6 col-lg-4">
-        <h4><a href="{% url 'reviews:movie_detail' movie.id %}">
+        <h4><a href="{% url 'reviews:movie_detail' movie.movieId %}">
         {{ movie.title }}
         </a></h4>
         <h5>{{ movie.review_set.count }} reviews</h5>
         <h5>{{ movie.average_rating | floatformat }} average rating</h5>
+        {% if movie.priority %}
+            <h5> recommendation priority: {{ movie.priority }} </h5>
+            <h5> recommendation algo: {{ movie.algoName }} </h5>
+        {% endif %}
     </div>
     {% endfor %}
 </div>

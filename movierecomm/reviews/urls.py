@@ -12,7 +12,7 @@ urlpatterns = [
     url(r'^movie/(?P<movie_id>[0-9]+)/$', views.movie_detail, name='movie_detail'),
     url(r'^movie/(?P<movie_id>[0-9]+)/add_review/$', views.add_review, name='add_review'),
     # ex: /review/user - get reviews for the logged user
-    url(r'^review/user/(?P<username>\w+)/$', views.user_review_list, name='user_review_list'),
+    url(r'^review/user/(?P<userid>\w+)/$', views.user_review_list, name='user_review_list'),
     # ex: /review/user - get reviews for the user passed in the url
     url(r'^review/user/$', views.user_review_list, name='user_review_list'),
     # ex: /recommendation - get wine recommendations for the logged user
