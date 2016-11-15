@@ -53,7 +53,7 @@ class RecommendedMovieList(models.Model):
     algo = models.CharField(max_length=128, default='NAIVE')
 
     def __str__(self):
-        return "{user:\"%s\",movie:\"%s\", priority:%d}"  %(self.user.username, self.movie.title, self.priority)
+        return "{user:\"%s\",movie:\"%s\", priority:%d, algo:%s}"  %(self.user.username, self.movie.title, self.priority, self.algo)
 
     class Meta:
         unique_together = (('user', 'movie', 'algo'),)
