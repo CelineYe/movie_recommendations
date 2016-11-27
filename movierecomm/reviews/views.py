@@ -8,6 +8,8 @@ from .forms import ReviewForm
 from .recommendation_algo import update_recommendation_by_review
 import datetime
 
+from multiprocessing import Process
+
 from django.contrib.auth.decorators import login_required
 # Create your views here.
 
@@ -44,7 +46,10 @@ def add_review(request, movie_id):
             review = Review.objects.get(user_id=request.user.id, movie_id=movie_id)
             review.rating = rating
             review.save(update_fields=['rating', 'comment'])
-            update_recommendation_by_review((request.user.id, movie_id), 'update')
+#            update_recommendation_by_review((request.user.id, movie_id), 'update')
+            # start a process to update recommendations
+            p = Process(target=update_recommendation_by_review, args=((request.user.id, movie_id), 'update'))
+            p.start()
         except Review.DoesNotExist :
             review = Review()
             review.movie = movie
@@ -53,7 +58,9 @@ def add_review(request, movie_id):
             review.comment = comment
             review.pub_date = datetime.datetime.now()
             review.save()
-            update_recommendation_by_review((request.user.id, movie_id), 'add')
+#            update_recommendation_by_review((request.user.id, movie_id), 'add')
+            p = Process(target=update_recommendation_by_review, args=((request.user.id, movie_id), 'add'))
+            p.start()
         # Always return an HttpResponseRedirect after successfully dealing
         # with POST data. This prevents data from being posted twice if a
         # user hits the Back button.

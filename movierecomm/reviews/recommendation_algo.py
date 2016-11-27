@@ -89,7 +89,7 @@ def update_recommendation_by_review(record=None, mode=None):
         ru = a[1](ratings, userCount, movieCount, NU, NM)
         rec = {}   # { userId: [ (movieId, priority) ]}
         for uidx, m  in ru.iteritems():
-            print "uidx:", uidx
+#            print "uidx:", uidx
             t = rec[ uidmap[uidx] ] = []
             for mi in m:
                 t.append( (midmap[mi[0]], mi[1]) )
