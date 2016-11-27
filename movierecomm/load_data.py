@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import sys, os 
 import traceback
 import pandas as pd
@@ -36,6 +38,7 @@ def save_review_from_row(row):
         review.movie = Movie.objects.get(movieId = row['movieId'])
         review.rating = row['rating']
         review.pub_date = datetime.datetime.fromtimestamp(row['timestamp'])
+        review.save()
 
 
 def save_movie_from_row(row):
@@ -58,7 +61,7 @@ def load_ratings(filename = 'data/ratings.csv'):
 
     for idx, row in ratings_df.iterrows():
         if idx % 100 == 0:
-            print idx, "userId:", row['userId']
+            print idx, "ratings:", row['userId'], row['movieId']
         save_review_from_row(row)
 
 
@@ -74,7 +77,7 @@ def load_movies(filename = 'data/movies.csv'):
 def load_data():
 #   load_movies()
 #   load_users()
-#   load_ratings()
+   load_ratings()
 
 if __name__ == "__main__":
     load_data()

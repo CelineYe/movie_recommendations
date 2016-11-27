@@ -85,13 +85,13 @@ def cosine_distance(A, I, J):
             printMsg( "zero J:", A[J,:] )
         return (d, nDim[0])
     else:
-        return (np.inf, nDim[0])
+        return (np.nan, nDim[0])
 
 
 def jz_calculate_recommendations(ratings, userCount, movieCount, NU, NM, MAX_RECOMM=5):
     """ ratings[u, m]: movie i rating by user u
     userCount, movieCount: number of users and movies
-    Nu, NM : valid number of users and movies. all the reset are set numpy.inf
+    Nu, NM : valid number of users and movies. all the reset are set numpy.nan
 
     return recommededMovies: { userIndex: [(movieIndex, priority) ] } .
     """
@@ -109,7 +109,7 @@ def jz_calculate_recommendations(ratings, userCount, movieCount, NU, NM, MAX_REC
     printMsg("Most popular movie:",  ratings_by_movie[0])
 
     #-- calculate distances between users
-    du = np.full((userCount,userCount), np.inf)
+    du = np.full((userCount,userCount), np.nan)
     for i in xrange(NU-1):
         for k in xrange(NU-i-1):
             j = i+k+1

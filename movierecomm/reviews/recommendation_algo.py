@@ -4,7 +4,7 @@ from reviews.models import Review, Movie, RecommendedMovieList
 import numpy as np
 
 from jz_naive_recommendation_algo import jz_calculate_recommendations
-
+from cf_movie_user_colfilter_algo import cf_similar_users_recommendations
 
 _debug = True
 
@@ -31,7 +31,7 @@ def save_recommendation(algoName, records):
             if RecommendedMovieList.objects.filter(user_id = userId, movie_id = m[0], priority = m[1], algo=algoName).count() > 0:
                 continue
             r = RecommendedMovieList(user_id = userId, movie_id = m[0], priority = m[1], algo=algoName)
-            printMsg(r)
+#            printMsg(r)
             r.save()
 
 #--- algo callback -----------------------------------------
@@ -50,16 +50,20 @@ def update_recommendation_by_review(record=None, mode=None):
     uidrmap = {} #{id:index}
     midmap = {}
     midrmap = {}
-    ratings = np.full((userCount, movieCount), np.inf)  # user rating matrix
-    NU = NM = 0
+    ratings = np.full((userCount, movieCount), np.nan)  # user rating matrix
+    NU = 0
+    NM = 0
+    i = 0
     for r in allreviews:
         uid, mid = r.user_id, r.movie_id
         if uidrmap.has_key(uid):
-            ui = uidrmap[uid]
+            ui = uidrmap[uid]  # userIdex
+#            printMsg(i, "Existing userId:", uid, ui)
         else:
             ui = NU
             uidmap[ui] = uid
             uidrmap[uid] = ui
+#            printMsg(i, "New userId:", uid, ui)
             NU += 1
 
         if midrmap.has_key(mid):
@@ -70,15 +74,22 @@ def update_recommendation_by_review(record=None, mode=None):
             midrmap[mid] = mi
             NM += 1
         ratings[ui, mi] = scaleRating(float(r.rating))
+        i += 1
 
-    printMsg("admin:",  User.objects.get(id=669).username, uidrmap[669], "movie:", 2550, midrmap[2550] )
+#    printMsg("admin:",  User.objects.get(id=669).username, uidrmap[669], "movie:", 2550, midrmap[2550] )
+#    printMsg("uidmap:", uidmap)
+#    return
 
     #--- computing in different algorithms ------
-    algos = [('JZNAIVE', jz_calculate_recommendations)]
+    algos = [
+#                ('JZNAIVE', jz_calculate_recommendations),
+                ('CFSIMILAR', cf_similar_users_recommendations),
+            ]
     for a in algos:
         ru = a[1](ratings, userCount, movieCount, NU, NM)
         rec = {}   # { userId: [ (movieId, priority) ]}
         for uidx, m  in ru.iteritems():
+            print "uidx:", uidx
             t = rec[ uidmap[uidx] ] = []
             for mi in m:
                 t.append( (midmap[mi[0]], mi[1]) )

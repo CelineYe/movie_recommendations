@@ -1,3 +1,5 @@
+#!/usr/bin/python
+
 import os
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "movierecomm.settings")
 
